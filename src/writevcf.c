@@ -1,5 +1,5 @@
 #include "writevcf.h"
-#include "samtools/kstring.h"
+#include "kstring.h"
 #include <R_ext/Connections.h>
 
 Rconnection getConnection(int n);

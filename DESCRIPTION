@@ -22,7 +22,7 @@ Suggests: RUnit, BSgenome.Hsapiens.UCSC.hg19,
         SNPlocs.Hsapiens.dbSNP.20110815,
         SNPlocs.Hsapiens.dbSNP.20101109, SIFT.Hsapiens.dbSNP132,
         PolyPhen.Hsapiens.dbSNP131, snpStats, ggplot2, BiocStyle
-LinkingTo: S4Vectors, IRanges, XVector, Biostrings, Rsamtools
+LinkingTo: S4Vectors, IRanges, XVector, Biostrings, Rsamtools, Rhtslib
 LazyLoad: yes
 biocViews: DataImport, Sequencing, SNP, Annotation,
         Genetics, VariantAnnotation

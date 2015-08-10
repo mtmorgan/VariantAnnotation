@@ -7,8 +7,9 @@
 #include "utilities.h"
 #include "IRanges_interface.h"
 #include "XVector_interface.h"
-#include "samtools/khash.h"
+#include "khash.h"
 #include "strhash.h"
+#include "bgzf.h"
 
 enum { ROWRANGES_IDX = 0, REF_IDX, ALT_IDX, QUAL_IDX, FILTER_IDX,
        INFO_IDX, GENO_IDX };
@@ -578,11 +579,11 @@ SEXP scan_vcf_character(SEXP file, SEXP yield, SEXP smap, SEXP fmap,
 }
 
 /* --- .Call ENTRY POINT --- */
-SEXP tabix_as_vcf(tabix_t *tabix, ti_iter_t iter, const int yield,
-                  SEXP state, SEXP rownames)
+SEXP tabix_as_vcf(htsFile *fp, tbx_t *tabix, hts_itr_t *iter,
+                  const int yield, SEXP state, SEXP rownames)
 {
     Rboolean row_names = LOGICAL(rownames)[0];
-    const ti_conf_t *conf = ti_get_conf(tabix->idx);
+    const tbx_conf_t conf = tabix->conf;
     SEXP sample = VECTOR_ELT(state, 0), fmap = VECTOR_ELT(state, 1);
     const int nrec = NA_INTEGER == yield ? TBX_INIT_SIZE : yield;
     struct parse_t *parse =
@@ -592,25 +593,24 @@ SEXP tabix_as_vcf(tabix_t *tabix, ti_iter_t iter, const int yield,
     int BUFLEN = 4096;
     char *buf = Calloc(BUFLEN, char);
 
-    int linelen;
-    const char *line;
+    kstring_t str = {0,0,0};
 
     int irec = 0;
-    while (NULL != (line = ti_read(tabix, iter, &linelen))) {
+    while (tbx_itr_next(fp, tabix, iter, &str) >= 0) {
 
-        if (conf->meta_char == *line)
+        if (conf.meta_char == str.s[0])
             continue;
 
         if (irec == parse->vcf_n)
             _parse_grow(parse, 0);
 
-        if (linelen + 1 > BUFLEN) {
+        if (str.l + 1 > BUFLEN) {
             Free(buf);
-            BUFLEN = 2 * linelen;
+            BUFLEN = 2 * str.l;
             buf = Calloc(BUFLEN, char);
         }
-        memcpy(buf, line, linelen);
-        buf[linelen] = '\0';
+        memcpy(buf, str.s, str.l);
+        buf[str.l] = '\0';
 
         _parse(buf, irec, parse, row_names);
         irec += 1;
@@ -618,14 +618,15 @@ SEXP tabix_as_vcf(tabix_t *tabix, ti_iter_t iter, const int yield,
             break;
     }
 
-    if (tabix->fp->errcode) {
-        Free(buf);
+    if (str.s != NULL)
+        free(str.s);
+    Free(buf);
+
+    if (hts_get_bgzfp(fp)->errcode) {
         _parse_free(parse);
         Rf_error("read line failed, corrupt or invalid file?");
     }
         
-    Free(buf);
-
     _vcf_grow(parse->vcf, irec);
 
     SEXP result = PROTECT(_vcf_as_SEXP(parse, fmap, sample, row_names));
