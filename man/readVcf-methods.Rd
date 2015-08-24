@@ -122,7 +122,7 @@ readGT(file, nucleotides=FALSE, param=ScanVcfParam(), ..., row.names=TRUE)
       header use \code{scanVcfHeader()}. See ?\code{VCFHeader} for more details.
 
       Passing \code{verbose = TRUE} to \code{readVcf()} prints the fields
-      that were found in the header and will be read by \code{readVcf}.
+      with header lines that will be parsed by \code{readVcf}.
     }
     \item{Data type: }{
       CHROM, POS, ID and REF fields are used to create the \code{GRanges}
@@ -371,6 +371,20 @@ readGT(file, nucleotides=FALSE, param=ScanVcfParam(), ..., row.names=TRUE)
       cat("vcf dim:", dim(vcf), "\n")
   close(tab)
 
+  ## ---------------------------------------------------------------------
+  ## Debugging with 'verbose'
+  ## ---------------------------------------------------------------------
+  ## readVcf() uses information in the header lines to parse the data to 
+  ## the correct number and type. Fields without header lines are skipped. 
+  ## If a call to readVcf() results in no info(VCF) or geno(VCF) data the
+  ## file may be missing header lines. Set 'verbose = TRUE' to get
+  ## a listing of fields found in the header.
+
+  ## readVcf(myfile, "mygenome", verbose=TRUE)
+
+  ## Header fields can also be discovered with scanVcfHeader().
+  hdr <- scanVcfHeader(fl)
+  geno(hdr)
 }
 
 \keyword{manip}
